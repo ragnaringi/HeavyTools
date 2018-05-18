@@ -45,7 +45,7 @@ def compileSource(srcDir, targetName, dstDir):
 	os.makedirs("temp")
 
 	copy_tree(srcDir, "temp")
-	os.system("cp " + sys.path[0]+"/bin/Makefile " + "temp/Makefile")  # Prepare files
+	os.system("cp " + sys.path[0]+"/bin/Makefile temp/Makefile")  # Prepare files
 	os.system("cd temp && make libname="+targetName) # Compile and run
 
 	copyHeaders("temp", dstDir)
