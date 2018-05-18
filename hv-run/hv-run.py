@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
-import shutil, errno, os, atexit, sys
+import shutil, errno, os, atexit
 from sys import argv
 
 patchName = "Test"
-outputDir = "heavy"
+outputDir = "temp"
 
 def clearTempFiles():
 	shutil.rmtree(outputDir)
@@ -17,14 +17,13 @@ def processPatch(patchFolder):
 	
 	os.makedirs(outputDir)
 
-	command = "python uploader.py " + patchFolder + " -n " + patchName + " -o " + outputDir
-	os.system(command)
-	os.system("cp bin/main.c heavy/main.c && cp bin/Makefile heavy/Makefile")
-	os.system("cd heavy && make && ./main")
+	os.system("hv-uploader " + patchFolder + " -n " + patchName + " -o " + outputDir + " -g c-src") # Upload
+	os.system("cp bin/main.c " + outputDir+"/main.c && cp bin/Makefile " + outputDir+"/Makefile") # Prepare files
+	os.system("cd " + outputDir + " && make && ./main") # Compile and run
 
 def exit_handler():
-    print "Cleaning Up"
-    clearTempFiles()
+	print "Cleaning Up"
+	clearTempFiles()
 
 if len(argv) > 1:
 	patchFolder = argv[1]

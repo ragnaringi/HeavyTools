@@ -35,7 +35,9 @@ program_LIBRARIES := portaudio
 
 # This adds -I$(includedir) for every include directory given in $(program_INCLUDE_DIRS)... so if you used ./include, it would expand to -I./include
 # Remember that CPPFLAGS is the C preprocessor flags, so anything that compiles a C or C++ source file into an object file will use this flag.
-CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
+CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir)) 
+CFLAGS   += -std=c11
+CXXFLAGS += -std=c++11
 
 # This adds -L$(librarydir) for every library directory given in $(program_LIBRARY_DIRS)... so if you used ./lib, it would expand to -L./lib
 # Since the LDFLAGS are used when linking, this will cause the appropriate flags to be passed to the linker.
