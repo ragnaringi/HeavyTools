@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import shutil, errno, os, atexit
+import shutil, errno, os, atexit, sys
+from distutils.dir_util import copy_tree
 from sys import argv
 
 patchName = "Test"
@@ -18,7 +19,7 @@ def processPatch(patchFolder):
 	os.makedirs(outputDir)
 
 	os.system("hv-uploader " + patchFolder + " -n " + patchName + " -o " + outputDir + " -g c-src") # Upload
-	os.system("cp bin/main.c " + outputDir+"/main.c && cp bin/Makefile " + outputDir+"/Makefile") # Prepare files
+	copy_tree(sys.path[0]+"/bin", outputDir)
 	os.system("cd " + outputDir + " && make && ./main") # Compile and run
 
 def exit_handler():
