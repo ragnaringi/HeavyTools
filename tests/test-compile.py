@@ -1,4 +1,4 @@
-import os, shutil
+import sys, os, shutil
 from setup import downloadSource
 
 print("Testing hv-compile")
@@ -6,7 +6,7 @@ print("Testing hv-compile")
 srcPath = "src"
 dstPath = "out"
 name    = "metro"
-libName = "libmetro.a"
+libName = "libmetro." + ("so", "a")[sys.platform == "darwin"]
 
 if not os.path.exists(srcPath):
   print("Downloading test source files")
