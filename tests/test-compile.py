@@ -1,28 +1,34 @@
-import sys, os, shutil
+import unittest, sys, os, shutil
 from setup import downloadSource
+sys.path.append("..")
 
-print("Testing hv-compile")
+module = __import__('hv-compile')
 
 srcPath = "src"
 dstPath = "out"
 name    = "metro"
 libName = "libmetro." + ("so", "a")[sys.platform == "darwin"]
 
-if not os.path.exists(srcPath):
-  print("Downloading test source files")
-  downloadSource()
+class CompileTestCase(unittest.TestCase):
+  """Tests for `hv-compile`"""
 
-import sys
-sys.path.append("..")
-module = __import__('hv-compile')
+  @classmethod
+  def tearDownClass(cls):
+    print("Cleaning Up")
+    shutil.rmtree(dstPath)
 
-print("Compiling '" + libName + "'")
-module.compileSource(srcPath, name, dstPath)
+  def testSourceExists(self):
+    """Return True if Heavy source exists."""
+    self.assertTrue(os.path.exists(srcPath))
 
-if os.path.exists(os.path.join(dstPath,libName)):
-  print("SUCCESS")
-else:
-  print("Compilation ERROR")
+  def testStaticLibraryIsGenerated(self):
+    """Return True if static library is generated."""
+    module.compileSource(srcPath, name, dstPath)
+    self.assertTrue(os.path.exists(os.path.join(dstPath,libName)))
 
-print("Cleaning Up")
-shutil.rmtree(dstPath)
+if __name__ == '__main__':
+  if not os.path.exists(srcPath):
+    print("Downloading test source files")
+    downloadSource() # TODO: Error if fails
+
+  unittest.main()
