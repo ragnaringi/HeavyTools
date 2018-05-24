@@ -1,4 +1,4 @@
-import shutil, os, sys
+import shutil, os, sys, argparse
 from sys import argv
 from glob import glob
 from os import path
@@ -28,12 +28,12 @@ def getFilesWithExtension(srcDir, extensions):
 def replaceOccurencesOfStringInFile(filePath, string, replacement):
     tempPath = join(path.dirname(filePath), "temp" + path.splitext(filePath)[1])
     os.rename(filePath, tempPath)
-
+    
     with open(tempPath, "rt") as fin:
         with open(filePath, "wt") as fout:
             for line in fin:
                 fout.write(line.replace(string, replacement))
-
+                
     os.remove(tempPath)
 
 
@@ -45,7 +45,10 @@ def getLibraryName(srcDir):
 
 def copyProjectFiles(dstDir, projectType):
     filePaths = []
-    srcDir = join(binDir, sys.platform, projectType)
+    srcDir = join(binDir, projectType)
+    if not path.exists(srcDir):
+        raise ValueError("Project type : " + projectType + " doesn't exist")
+
     files = os.listdir(srcDir)
     for file in files:
         if file == ".DS_Store": continue
@@ -57,9 +60,6 @@ def copyProjectFiles(dstDir, projectType):
 
 
 def renameProject(projectFiles, name):
-    if not sys.platform == "darwin":
-        raise NotImplementedError
-    
     filePaths = []
 
     for file in projectFiles:
@@ -70,16 +70,13 @@ def renameProject(projectFiles, name):
             if path.exists(newPath):
                 shutil.rmtree(newPath)
             os.rename(file, newPath)
-
+            
         filePaths.append(newPath)
     
     return filePaths
 
 
 def updateProjectFileReferences(projectFiles, name):
-    if not sys.platform == "darwin":
-        raise NotImplementedError
-    
     for file in projectFiles:
         newPath = file
         if os.path.splitext(file)[1] == ".xcodeproj":
@@ -91,34 +88,43 @@ def createProject(srcDir, name, projectType):
     try:
         # Copy project files
         projectFiles = copyProjectFiles(srcDir, projectType)
-
+        
         # Rename project
         projectFiles = renameProject(projectFiles, name)
-
+        
         # Edit file references references
         updateProjectFileReferences(projectFiles, name)
-
+        
     finally:
         print("Project Created")
 
 
 if __name__ == '__main__':
-    srcDir = os.getcwd()
-    targetName = getLibraryName(srcDir).split('_')[1]
-    projectType = "c"
-
-    if len(argv) > 1:
-        targetName = argv[1]
-
+    parser = argparse.ArgumentParser(
+        description="Creates a project to run Heavy source")
+    parser.add_argument("input_dir",
+        default = os.getcwd(),
+        nargs='?',
+        help = "A directory containing Heavy source. All .{h,hpp,c,cpp} files in the directory will be added to project.")
+    parser.add_argument(
+        "-n", "--name",
+        nargs='?',
+        help = "Name of the Heavy context. If none is provided, first one found will be used")
+    parser.add_argument(
+        "-t", "--type",
+        default = "c",
+        nargs='?',
+        help="Project type. Default is 'c'")
+    
+    args = parser.parse_args()
+    
+    if args.name is None:
+        args.name = getLibraryName(args.input_dir).split('_')[1]
+        
     # TODO:
     # 1. Check how many contexts found in directory and
-    #    ask to user to select if multiple are present
-    # 2. Check for project type. Currently only Xcode
-    #    command line C is supported
-    # 3. Add option to precompile static lib
+    #    ask user to select if multiple are present
+    # 2. Add option to precompile static lib
     #
-    if not (sys.platform == "darwin"):
-        print("Currently only supported on Mac OSX")
-        raise NotImplementedError
-
-    createProject(srcDir, targetName, projectType)
+    
+    createProject(args.input_dir, args.name, args.type)
