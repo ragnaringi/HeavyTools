@@ -31,5 +31,6 @@ if len(argv) > 1:
 	processPatch(patchFolder)
 else:
 	print("Error: No folder provided")
+	sys.exit()
 
 atexit.register(exit_handler)
