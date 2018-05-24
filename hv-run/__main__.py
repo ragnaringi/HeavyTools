@@ -8,29 +8,29 @@ patchName = "Test"
 outputDir = "temp"
 
 def clearTempFiles():
-	shutil.rmtree(outputDir)
+    shutil.rmtree(outputDir)
 
 def processPatch(patchFolder):
-	print("Compiling: " + patchFolder)
+    print("Compiling: " + patchFolder)
 
-	if os.path.exists(outputDir):
-		clearTempFiles()
-	
-	os.makedirs(outputDir)
+    if os.path.exists(outputDir):
+        clearTempFiles()
+    
+    os.makedirs(outputDir)
 
-	os.system("hv-uploader " + patchFolder + " -n " + patchName + " -o " + outputDir + " -g c-src") # Upload
-	copy_tree(sys.path[0]+"/bin", outputDir)
-	os.system("cd " + outputDir + " && make && ./main") # Compile and run
+    os.system("hv-uploader " + patchFolder + " -n " + patchName + " -o " + outputDir + " -g c-src") # Upload
+    copy_tree(sys.path[0]+"/bin", outputDir)
+    os.system("cd " + outputDir + " && make && ./main") # Compile and run
 
 def exit_handler():
-	print "Cleaning Up"
-	clearTempFiles()
+    print "Cleaning Up"
+    clearTempFiles()
 
 if len(argv) > 1:
-	patchFolder = argv[1]
-	processPatch(patchFolder)
+    patchFolder = argv[1]
+    processPatch(patchFolder)
 else:
-	print("Error: No folder provided")
-	sys.exit()
+    print("Error: No folder provided")
+    sys.exit()
 
 atexit.register(exit_handler)
