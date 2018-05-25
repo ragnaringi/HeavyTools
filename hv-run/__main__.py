@@ -1,36 +1,39 @@
 #!/usr/bin/python
 
-import shutil, errno, os, atexit, sys
-from distutils.dir_util import copy_tree
-from sys import argv
+import os, argparse
+from src.code import processPatch
 
-patchName = "Test"
-outputDir = "temp"
+# Extracts library name from a Heavy source directory
+def getLibraryName(srcDir):
+    file = [filename for filename in os.listdir(srcDir) if filename.startswith("Heavy_")][0]
+    return (os.path.splitext(file)[0])
 
-def clearTempFiles():
-    shutil.rmtree(outputDir)
-
-def processPatch(patchFolder):
-    print("Compiling: " + patchFolder)
-
-    if os.path.exists(outputDir):
-        clearTempFiles()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="Compiles and runs Pd patch or Heavy source")
+    parser.add_argument("input_dir",
+        default = os.getcwd(),
+        nargs='?',
+        help = "A directory containing Heavy source or a _main.pd file.")
+    parser.add_argument(
+        "-n", "--name",
+        nargs='?',
+        help = "Name of the Heavy patch or context. If none is provided an attempt will be made to automatically derive it")
+    parser.add_argument(
+        "-t", "--type",
+        nargs='?',
+        type = int,
+        help = "Source type hint. Pass 0 for Heavy Source and 1 for Pd")
     
-    os.makedirs(outputDir)
+    args = parser.parse_args()
+    
+    if args.type is None:
+        args.type = int(os.path.exists(os.path.join(args.input_dir, "_main.pd")))
 
-    os.system("hv-uploader " + patchFolder + " -n " + patchName + " -o " + outputDir + " -g c-src") # Upload
-    copy_tree(sys.path[0]+"/bin", outputDir)
-    os.system("cd " + outputDir + " && make && ./main") # Compile and run
-
-def exit_handler():
-    print "Cleaning Up"
-    clearTempFiles()
-
-if len(argv) > 1:
-    patchFolder = argv[1]
-    processPatch(patchFolder)
-else:
-    print("Error: No folder provided")
-    sys.exit()
-
-atexit.register(exit_handler)
+    if args.name is None:
+        if args.type == 0:
+            args.name = getLibraryName(args.input_dir).split('_')[1]
+        else:
+            args.name = os.path.basename(args.input_dir) # If Pd source get name from root directory
+        
+    processPatch(args.input_dir, args.name, args.type)
