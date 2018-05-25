@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import shutil, os, atexit, sys, argparse, tempfile
+import sys, os, subprocess, shutil, tempfile
 from distutils.dir_util import copy_tree
 from sys import argv
 
@@ -21,7 +21,7 @@ def processPatch(srcDir, name, type):
         os.makedirs(tempDir)
 
         if type == 1:
-            os.system("hv-uploader " + srcDir + " -n " + name + " -o " + tempDir + " -g c-src") # Upload
+            subprocess.call("hv-uploader " + srcDir + " -n " + name + " -o " + tempDir + " -g c-src", shell=True) # Upload
         else: 
             # Directory is heavy source
             copy_tree(srcDir, tempDir)
