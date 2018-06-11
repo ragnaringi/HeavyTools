@@ -38,7 +38,15 @@ class Event(LoggingEventHandler):
                 elif process == "run":
                     print("TODO: Running source")
                 elif process == "unity":
-                    print("TODO: Reloading Unity plugin")
+                    print("Reloading Unity plugin")
+                    compileTemp = tempfile.mkdtemp(prefix="hv_watchdog-")
+                    binDir = os.path.join(os.path.dirname(__file__), "bin")
+                    copy_tree(binDir, compileTemp)
+                    copy_tree(tempDir, os.path.join(compileTemp,"source","heavy"))
+                    shutil.rmtree(tempDir)
+                    subprocess.call("cd " + os.path.join(compileTemp,"xcode") + " && xcodebuild", shell=True) # Upload
+                    copy_tree(os.path.join(compileTemp, "build", "macos", "x86_64", "Release"), tempDir)
+                    shutil.rmtree(compileTemp)
 
                 if os.path.exists(out_dir):
                     if clean: 
@@ -49,6 +57,12 @@ class Event(LoggingEventHandler):
                 copy_tree(tempDir, out_dir)
                 shutil.rmtree(tempDir)
                 print("[hv-watchdog] Process Complete")
+
+                if process == "unity":
+                    path = os.path.join(os.path.dirname(__file__), "RunUnity.scpt")
+                    print("Running script: " + path)
+                    subprocess.call("osascript " + path, shell=True)
+
             else:
                 print("No '_main.pd' found. Aborting.")
         else:
