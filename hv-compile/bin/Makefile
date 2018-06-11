@@ -47,7 +47,7 @@ program_LIBRARIES :=
 
 # This adds -I$(includedir) for every include directory given in $(program_INCLUDE_DIRS)... so if you used ./include, it would expand to -I./include
 # Remember that CPPFLAGS is the C preprocessor flags, so anything that compiles a C or C++ source file into an object file will use this flag.
-CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir)) -ffast-math -DNDEBUG -DHV_SIMD_AVX
+CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir)) -ffast-math -DNDEBUG -DHV_SIMD_SSE
 CFLAGS   += -std=c11
 CXXFLAGS += -std=c++11
 
