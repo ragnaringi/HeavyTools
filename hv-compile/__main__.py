@@ -23,11 +23,11 @@ if __name__ == '__main__':
     
     
     args = parser.parse_args()
-
+    
     if args.name is None:
         args.name = getLibraryName(args.input_dir).split('_')[1]
-
+        
     if args.out is None:
         args.out = args.input_dir+"-compiled"
-
+        
     compileSource(args.input_dir, args.name, args.out)
