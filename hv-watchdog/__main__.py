@@ -13,40 +13,55 @@ input_dir = ""
 name = ""
 out_dir = ""
 process = ""
+extra = ""
 clean = 0
+
+def replaceOccurencesOfStringInFile(filePath, string, replacement):
+    tempPath = os.path.join(os.path.dirname(filePath), "temp" + os.path.splitext(filePath)[1])
+    os.rename(filePath, tempPath)
+    
+    with open(tempPath, "rt") as fin:
+        with open(filePath, "wt") as fout:
+            for line in fin:
+                fout.write(line.replace(string, replacement))
+                
+    os.remove(tempPath)
 
 class Event(LoggingEventHandler):
     def dispatch(self, event):
         filename, extension = os.path.splitext(event.src_path)
         print("Changes made to file: " + filename + extension)
         if extension == ".pd":
-            print("Recompiling")
             if os.path.exists(os.path.join(args.input_dir, "_main.pd")):
-                print("_main.pd exists")
-
+                
                 tempDir = tempfile.mkdtemp(prefix="hv_watchdog-")
-                print("Uploading source")
-                subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + tempDir + " -g c-src", shell=True) # Upload
                 
                 if process == "compile":
-                    print("Compiling source")
+                    print("Uploading source")
                     compileTemp = tempfile.mkdtemp(prefix="hv_watchdog-")
-                    copy_tree(tempDir, compileTemp)
-                    shutil.rmtree(tempDir)
+                    subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + compileTemp + " -g c-src", shell=True)
+                    print("Compiling source")
                     hv_compile.compileSource(compileTemp, name, tempDir)
                     shutil.rmtree(compileTemp)
                 elif process == "run":
                     print("TODO: Running source")
+                    # subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + tempDir + " -g c-src", shell=True)
                 elif process == "unity":
                     print("Reloading Unity plugin")
-                    compileTemp = tempfile.mkdtemp(prefix="hv_watchdog-")
+                    # Download Unity binary
+                    binaryFlag = "unity-macos-x64"
+                    if sys.platform.startswith('win'):
+                        binaryFlag = "unity-win-x64"
+                    elif sys.platform.startswith('lin'):
+                        binaryFlag = "unity-linux-x64"
+                    subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + tempDir + " -g " + binaryFlag, shell=True)
+                    # Copy AudioLib.cs template
                     binDir = os.path.join(os.path.dirname(__file__), "bin")
-                    copy_tree(binDir, compileTemp)
-                    copy_tree(tempDir, os.path.join(compileTemp,"source","heavy"))
-                    shutil.rmtree(tempDir)
-                    subprocess.call("cd " + os.path.join(compileTemp,"xcode") + " && xcodebuild", shell=True) # Upload
-                    copy_tree(os.path.join(compileTemp, "build", "macos", "x86_64", "Release"), tempDir)
-                    shutil.rmtree(compileTemp)
+                    tempFile = os.path.join(tempDir, "Hv_" + name + "_AudioLib.cs")
+                    shutil.copy2(os.path.join(binDir, "Hv_Test_AudioLib.cs"), tempFile)
+                    # Replace template context references with current patch name
+                    replaceOccurencesOfStringInFile(tempFile, "Hv_Test", "Hv_" + name)
+                    replaceOccurencesOfStringInFile(tempFile, "hv_Test", "hv_" + name)
 
                 if os.path.exists(out_dir):
                     if clean: 
@@ -58,11 +73,13 @@ class Event(LoggingEventHandler):
                 shutil.rmtree(tempDir)
                 print("[hv-watchdog] Process Complete")
 
-                if process == "unity":
-                    path = os.path.join(os.path.dirname(__file__), "RunUnity.scpt")
-                    print("Running script: " + path)
-                    subprocess.call("osascript " + path, shell=True)
-
+                # If specified, we trigger Unity to play automatically
+                if process == "unity" and extra == "restart":
+                    if sys.platform == "darwin":
+                        binDir = os.path.join(os.path.dirname(__file__), "bin")
+                        subprocess.call("osascript " + os.path.join(binDir, "RunUnity.scpt"), shell=True)
+                    else:
+                        print("Restarting the Editor is only supported on MacOS")
             else:
                 print("No '_main.pd' found. Aborting.")
         else:
@@ -91,16 +108,20 @@ if __name__ == "__main__":
         default=["./"], # by default
         help="List of destination directories for retrieved files.")
     parser.add_argument(
-        "-p", "--process",
-        default = "Upload",
-        nargs='?',
-        help = "Process to trigger on file changes")
-    parser.add_argument(
         "-c", "--clean",
         nargs="?",
         type=int,
         default=0,
         help="Specifies whether to clean output directory on new process")
+    parser.add_argument(
+        "-p", "--process",
+        default = "upload",
+        nargs='?',
+        help = "Post-Process to trigger on file changes")
+    parser.add_argument(
+        "-e", "--extra",
+        nargs='?',
+        help = "Extra Post-Process info")
     
     args = parser.parse_args()
 
@@ -110,8 +131,9 @@ if __name__ == "__main__":
     input_dir = args.input_dir
     name = args.name
     out_dir = args.out
-    process = args.process
     clean = args.clean
+    process = args.process
+    extra = args.extra
 
     path = sys.argv[1] if len(sys.argv) > 1 else '.'
     event_handler = Event()
