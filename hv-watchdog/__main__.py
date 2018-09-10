@@ -6,7 +6,8 @@ from watchdog.observers import Observer
 from watchdog.events import LoggingEventHandler
 
 sys.path.append("..")
-
+from utils import hvccPath
+from utils import replaceOccurencesOfStringInFile
 hv_compile = __import__('hv-compile')
 
 input_dir = ""
@@ -16,36 +17,33 @@ process = ""
 extra = ""
 clean = 0
 
-def replaceOccurencesOfStringInFile(filePath, string, replacement):
-    tempPath = os.path.join(os.path.dirname(filePath), "temp" + os.path.splitext(filePath)[1])
-    os.rename(filePath, tempPath)
-    
-    with open(tempPath, "rt") as fin:
-        with open(filePath, "wt") as fout:
-            for line in fin:
-                fout.write(line.replace(string, replacement))
-                
-    os.remove(tempPath)
-
 class Event(LoggingEventHandler):
     def dispatch(self, event):
         filename, extension = os.path.splitext(event.src_path)
         print("Changes made to file: " + filename + extension)
         if extension == ".pd":
-            if os.path.exists(os.path.join(args.input_dir, "_main.pd")):
+            mainFile = os.path.join(args.input_dir, "_main.pd")
+            if os.path.exists(mainFile):
                 
                 tempDir = tempfile.mkdtemp(prefix="hv_watchdog-")
                 
                 if process == "compile":
-                    print("Uploading source")
-                    compileTemp = tempfile.mkdtemp(prefix="hv_watchdog-")
-                    subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + compileTemp + " -g c-src", shell=True)
                     print("Compiling source")
-                    hv_compile.compileSource(compileTemp, name, tempDir)
+                    compileTemp = tempfile.mkdtemp(prefix="hv_watchdog-")
+                    command = "python2.7 " + hvccPath() \
+                            + " " + mainFile \
+                            + " -n " + name \
+                            + " -o " + compileTemp \
+                            + " -g c-src"
+                    print "Command: " +command
+                    subprocess.call(command, shell=True)
+
+                    cSource = os.path.join(compileTemp, 'c')
+                    hv_compile.compileSource(cSource, name, tempDir)
+                    
                     shutil.rmtree(compileTemp)
                 elif process == "run":
                     print("TODO: Running source")
-                    # subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + tempDir + " -g c-src", shell=True)
                 elif process == "unity":
                     print("Reloading Unity plugin")
                     # Download Unity binary
@@ -54,7 +52,14 @@ class Event(LoggingEventHandler):
                         binaryFlag = "unity-win-x64"
                     elif sys.platform.startswith('lin'):
                         binaryFlag = "unity-linux-x64"
-                    subprocess.call("hv-uploader " + input_dir + " -n " + name + " -o " + tempDir + " -g " + binaryFlag, shell=True)
+                    
+                    command = "python2.7 " + hvccPath() \
+                            + " " + mainFile \
+                            + " -n " + name \
+                            + " -o " + tempDir \
+                            + " -g " + binaryFlag
+                    subprocess.call(command, shell=True)
+                    
                     # Copy AudioLib.cs template
                     binDir = os.path.join(os.path.dirname(__file__), "bin")
                     tempFile = os.path.join(tempDir, "Hv_" + name + "_AudioLib.cs")
@@ -62,17 +67,15 @@ class Event(LoggingEventHandler):
                     # Replace template context references with current patch name
                     replaceOccurencesOfStringInFile(tempFile, "Hv_Test", "Hv_" + name)
                     replaceOccurencesOfStringInFile(tempFile, "hv_Test", "hv_" + name)
-
-                if os.path.exists(out_dir):
-                    if clean: 
-                        shutil.rmtree(out_dir)
-                else:
-                    os.makedirs(out_dir)
-
+                    
+                if os.path.exists(out_dir) and clean:
+                    shutil.rmtree(out_dir)
+                
+                os.makedirs(out_dir)
                 copy_tree(tempDir, out_dir)
                 shutil.rmtree(tempDir)
                 print("[hv-watchdog] Process Complete")
-
+                
                 # If specified, we trigger Unity to play automatically
                 if process == "unity" and extra == "restart":
                     if sys.platform == "darwin":
@@ -85,11 +88,6 @@ class Event(LoggingEventHandler):
         else:
             print("File is not of type '.pd'. Ignoring")
 
-
-# Extracts library name from a Heavy source directory
-def getLibraryName(srcDir):
-    file = [filename for filename in os.listdir(srcDir) if filename.startswith("Heavy_")][0]
-    return (os.path.splitext(file)[0])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
