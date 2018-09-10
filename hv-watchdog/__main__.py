@@ -27,7 +27,7 @@ class Event(LoggingEventHandler):
                 
                 tempDir = tempfile.mkdtemp(prefix="hv_watchdog-")
                 
-                if process == "compile":
+                if process == "compile" or "build" or "run":
                     print("Compiling source")
                     compileTemp = tempfile.mkdtemp(prefix="hv_watchdog-")
                     command = "python2.7 " + hvccPath() \
@@ -35,15 +35,20 @@ class Event(LoggingEventHandler):
                             + " -n " + name \
                             + " -o " + compileTemp \
                             + " -g c-src"
-                    print "Command: " +command
                     subprocess.call(command, shell=True)
-
+                    
                     cSource = os.path.join(compileTemp, 'c')
-                    hv_compile.compileSource(cSource, name, tempDir)
+                    
+                    if process == "build":
+                        print("Building source")
+                        hv_compile.compileSource(cSource, name, tempDir)
+                    elif process == "run":
+                        print("Running source")
+                    else:
+                        copy_tree(cSource, tempDir)
                     
                     shutil.rmtree(compileTemp)
-                elif process == "run":
-                    print("TODO: Running source")
+                    
                 elif process == "unity":
                     print("Reloading Unity plugin")
                     # Download Unity binary
@@ -113,9 +118,9 @@ if __name__ == "__main__":
         help="Specifies whether to clean output directory on new process")
     parser.add_argument(
         "-p", "--process",
-        default = "upload",
+        default = "compile",
         nargs='?',
-        help = "Post-Process to trigger on file changes")
+        help = "Process to trigger on file changes")
     parser.add_argument(
         "-e", "--extra",
         nargs='?',
