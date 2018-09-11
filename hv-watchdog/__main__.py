@@ -40,7 +40,7 @@ class Event(LoggingEventHandler):
         if not extension == ".pd":
             print("File is not of type '.pd'. Ignoring")
             return
-            
+
         mainFile = os.path.join(args.input_dir, "_main.pd")
         
         if not os.path.exists(mainFile):
@@ -49,7 +49,7 @@ class Event(LoggingEventHandler):
             
         tempDir = tempfile.mkdtemp(prefix="hv_watchdog-")
         
-        if process == "compile" or "build" or "run":
+        if process == "compile" or process == "build" or process == "run":
             print("Compiling source")
             self.temp_compile_path = tempfile.mkdtemp(prefix="hv_watchdog-")
             command = "python2.7 " + hvccPath() \
@@ -58,9 +58,9 @@ class Event(LoggingEventHandler):
                     + " -o " + self.temp_compile_path \
                     + " -g c-src"
             subprocess.call(command, shell=True)
-            
+
             cSource = os.path.join(self.temp_compile_path, 'c')
-            
+
             if process == "build":
                 print("Building source")
                 hv_compile.compileSource(cSource, name, tempDir)
@@ -76,36 +76,36 @@ class Event(LoggingEventHandler):
             
         elif process == "unity":
             print("Reloading Unity plugin")
-            # Download Unity binary
-            binaryFlag = "unity-macos-x64"
-            if sys.platform.startswith('win'):
-                binaryFlag = "unity-win-x64"
-            elif sys.platform.startswith('lin'):
-                binaryFlag = "unity-linux-x64"
             
             command = "python2.7 " + hvccPath() \
                     + " " + mainFile \
                     + " -n " + name \
                     + " -o " + tempDir \
-                    + " -g " + binaryFlag
+                    + " -g unity"
             subprocess.call(command, shell=True)
+            
+            unitySource = os.path.join(tempDir, "unity", "source", "unity")
             
             # Copy AudioLib.cs template
             binDir = os.path.join(os.path.dirname(__file__), "bin")
-            tempFile = os.path.join(tempDir, "Hv_" + name + "_AudioLib.cs")
-            shutil.copy2(os.path.join(binDir, "Hv_Test_AudioLib.cs"), tempFile)
+            template = os.path.join(binDir, "Hv_Test_AudioLib.cs")
+            newScript = os.path.join(unitySource, "Hv_" + name + "_AudioLib.cs")
+            shutil.copy2(template, newScript)
             # Replace template context references with current patch name
-            replaceOccurencesOfStringInFile(tempFile, "Hv_Test", "Hv_" + name)
-            replaceOccurencesOfStringInFile(tempFile, "hv_Test", "hv_" + name)
+            replaceOccurencesOfStringInFile(newScript, "Hv_Test", "Hv_" + name)
+            replaceOccurencesOfStringInFile(newScript, "hv_Test", "hv_" + name)
+            
+            # TODO: Build
             
         if os.path.exists(out_dir) and clean:
             shutil.rmtree(out_dir)
         
         os.makedirs(out_dir)
         copy_tree(tempDir, out_dir)
-        shutil.rmtree(tempDir)
-        
-        if not postscript == "":
+        # shutil.rmtree(tempDir)
+        print(tempDir)
+
+        if not postscript is None:
             print("Running postscript: " + postscript)
             ext = os.path.splitext(postscript)[1]
             if ext == ".scpt":
@@ -117,7 +117,7 @@ class Event(LoggingEventHandler):
                 subprocess.call("python " + postscript, shell=True)
             else:
                 print("Script type not recognised: " + ext)
-                
+
         print("[hv-watchdog] Process Complete")
 
 if __name__ == "__main__":
