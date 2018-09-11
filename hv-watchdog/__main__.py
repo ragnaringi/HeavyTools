@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import os, signal, sys, argparse, subprocess, shutil, tempfile
 import time
 # import logging
@@ -15,7 +17,7 @@ input_dir = ""
 name = ""
 out_dir = ""
 process = ""
-extra = ""
+postscript = None
 clean = 0
 
 class Event(LoggingEventHandler):
@@ -38,8 +40,9 @@ class Event(LoggingEventHandler):
         if not extension == ".pd":
             print("File is not of type '.pd'. Ignoring")
             return
-
+            
         mainFile = os.path.join(args.input_dir, "_main.pd")
+        
         if not os.path.exists(mainFile):
             print("No '_main.pd' found. Aborting.")
             return
@@ -55,9 +58,9 @@ class Event(LoggingEventHandler):
                     + " -o " + self.temp_compile_path \
                     + " -g c-src"
             subprocess.call(command, shell=True)
-
+            
             cSource = os.path.join(self.temp_compile_path, 'c')
-
+            
             if process == "build":
                 print("Building source")
                 hv_compile.compileSource(cSource, name, tempDir)
@@ -94,22 +97,28 @@ class Event(LoggingEventHandler):
             # Replace template context references with current patch name
             replaceOccurencesOfStringInFile(tempFile, "Hv_Test", "Hv_" + name)
             replaceOccurencesOfStringInFile(tempFile, "hv_Test", "hv_" + name)
-
+            
         if os.path.exists(out_dir) and clean:
             shutil.rmtree(out_dir)
         
         os.makedirs(out_dir)
         copy_tree(tempDir, out_dir)
         shutil.rmtree(tempDir)
-        print("[hv-watchdog] Process Complete")
-
-        # If specified, we trigger Unity to play automatically
-        if process == "unity" and extra == "restart":
-            if sys.platform == "darwin":
-                binDir = os.path.join(os.path.dirname(__file__), "bin")
-                subprocess.call("osascript " + os.path.join(binDir, "RunUnity.scpt"), shell=True)
+        
+        if not postscript == "":
+            print("Running postscript: " + postscript)
+            ext = os.path.splitext(postscript)[1]
+            if ext == ".scpt":
+                subprocess.call("osascript " + postscript, shell=True)
+            elif ext == ".sh":
+                subprocess.call("sh " + postscript, shell=True)
+            elif ext == ".py":
+                print("Running python script")
+                subprocess.call("python " + postscript, shell=True)
             else:
-                print("Restarting the Editor is only supported on MacOS")
+                print("Script type not recognised: " + ext)
+                
+        print("[hv-watchdog] Process Complete")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -139,9 +148,9 @@ if __name__ == "__main__":
         nargs='?',
         help = "Process to trigger on file changes")
     parser.add_argument(
-        "-e", "--extra",
+        "-ps", "--postscript",
         nargs='?',
-        help = "Extra Post-Process info")
+        help = "Specifies a script to run after process completes")
     
     args = parser.parse_args()
 
@@ -153,7 +162,7 @@ if __name__ == "__main__":
     out_dir = args.out
     clean = args.clean
     process = args.process
-    extra = args.extra
+    postscript = args.postscript
 
     path = sys.argv[1] if len(sys.argv) > 1 else '.'
     event_handler = Event()
