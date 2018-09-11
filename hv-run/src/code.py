@@ -4,9 +4,9 @@ import sys, os, subprocess, shutil, tempfile
 from distutils.dir_util import copy_tree
 
 sys.path.append(sys.path[0])
-from utils import hvccPath
-
 sys.path.append(os.path.join(sys.path[0], ".."))
+
+from utils import hvccPath
 hv_project = __import__('hv-project')
 
 tempDir = tempfile.mkdtemp(prefix="hv_run-")
