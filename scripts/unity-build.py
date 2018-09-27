@@ -13,11 +13,19 @@ def json_data(file_path):
         data = json.load(file)
     return data
 
-def build_macosx(input_dir, out_dir):
+def build_macosx(input_dir, name, out_dir):
     print("Building Unity Mac plugin")
     json = json_data(os.path.join(input_dir, "build.json"))["macos"]["x64"]
     projectDir = os.path.join(input_dir, json["projectDir"][0])
-    subprocess.call("cd " + projectDir + " && xcodebuild -alltargets", shell=True)
+    
+    # Check whether AudioPlugin already exists at destination
+    # It should not have changed so we don't need to recompile
+    pluginPath = os.path.join(out_dir, "AudioPlugin_Hv_" + name + ".bundle")
+    targets = "" if os.path.exists(pluginPath) else "-alltargets"
+    
+    # Build
+    subprocess.call("cd " + projectDir + " && xcodebuild " + targets, shell=True, stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT) 
+    # Copy plugin to output dir
     buildDir = os.path.join(input_dir, *json["binaryDir"])
     utils.copy_tree(buildDir, out_dir)
 
@@ -28,12 +36,11 @@ def run(input_dir, name, out_dir, noclean = 0):
         if os.path.exists(out_dir) and not noclean:
             shutil.rmtree(out_dir)
 
-        # TODO: Build
-        print("Building Unity plugin")
+        print("Building Unity plugin binary")
 
         platform = sys.platform
         if platform == "darwin":
-            build_macosx(temp_dir, out_dir)
+            build_macosx(temp_dir, name, out_dir)
         else:
             print("Platform not supported yet")
 
