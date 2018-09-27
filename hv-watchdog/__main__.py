@@ -47,7 +47,7 @@ class Event(LoggingEventHandler):
             print("Post script not found. Aborting.")
             return
             
-        subprocess.call("python " + postscript + " " + input_dir + " -n" + name + " -o" + out_dir, shell=True)
+        subprocess.call("python " + postscript + " " + input_dir + " -n" + name + " -o" + out_dir + " --noclean " + str(noclean), shell=True)
         
         print("[hv-watchdog] Process Complete")
         
