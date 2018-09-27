@@ -25,7 +25,7 @@ def run(input_dir, name, out_dir, noclean = 0):
     with utils.TemporaryDirectory() as temp_dir:
         compile.run(input_dir, name, temp_dir)
         
-        if os.path.exists(out_dir) and not args.noclean:
+        if os.path.exists(out_dir) and not noclean:
             shutil.rmtree(out_dir)
 
         # TODO: Build
