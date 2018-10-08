@@ -5,7 +5,21 @@ import distutils.dir_util
 def hvccPath():
     path = os.path.join(currentFileDirectory(), '.hvcc')
     if not os.path.exists(path):
-        print "ERROR: File does not exist"
+        var = raw_input("Please enter the path to hvcc on your system: ")
+        var = os.path.normpath(var)
+        if var.endswith(('hvcc.py')):
+            pass
+        elif var.endswith(('hvcc')):
+            var = os.path.join(var, 'hvcc.py')
+        elif var.endswith(('hvcc/')):
+            var = var[:-1]
+            var = os.path.join(var, 'hvcc.py')
+        else:
+            raise ValueError("Path to hvcc not recognised. Please provide path to either root folder or hvcc.py")
+            
+        with open(path, "w") as text_file:
+            text_file.write(var)
+
     return open(path, 'r').read().replace('\n', '')
 
 def replaceOccurencesOfStringInFile(filePath, string, replacement):
